@@ -4,7 +4,7 @@ local LocalPlayer = Players.LocalPlayer
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
-local TweenSerGetServicevice = game:("TweenService")
+local TweenService = game:GetService("TweenService")
 
 --// GUI
 local ScreenGui = Instance.new("ScreenGui")
@@ -55,7 +55,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -40, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Server Hopper"
+Title.Text = "Reversed's Hopper"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 18
@@ -216,4 +216,3 @@ ExecuteButton.MouseButton1Click:Connect(function()
     StatusLabel.Text = "Starting..."
     StartServerHop()
 end)
-
