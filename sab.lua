@@ -4,12 +4,12 @@ local LocalPlayer = Players.LocalPlayer
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
-local TweenSerGetServicevice = game:("TweenService")
+local TweenSerGetServicevice = game:("TweenService")
 
 --// GUI
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ServerHopGUI"
-ScreenGui.Parent = CoreGui
+ScreenGui.Parent = CoreGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 250, 0, 160)
