@@ -167,7 +167,7 @@ local function StartServerHop()
             cursor = site.nextPageCursor
             for _, v in ipairs(site.data) do
                 local id = tostring(v.id)
-                if v.playing < v.maxPlayers - 7 and id ~= JobID and not table.find(AllIDs, id) then
+                if v.playing < v.maxPlayers - 6 and id ~= JobID and not table.find(AllIDs, id) then
                     table.insert(servers, {id = id, ping = v.ping or 999})
                 end
             end
@@ -216,4 +216,5 @@ ExecuteButton.MouseButton1Click:Connect(function()
     StatusLabel.Text = "Starting..."
     StartServerHop()
 end)
+
 
