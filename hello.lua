@@ -1864,6 +1864,8 @@ local Teleport = {
 -- ==========================================
 -- FARM MANAGER OBJECT & PET DETECTOR
 -- ==========================================
+local FarmManager = {}
+
 function FarmManager.GetActivePetsUUIDS()
     local equippedUUIDs = {}
     if not Services.petsContainer then return {}, {} end 
