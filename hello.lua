@@ -182,172 +182,10 @@ Services.ReplicatedStorageSharedFolder = Services.ReplicatedStorage:WaitForChild
 task.wait(0.2)
 
 -- ==========================================
--- DYNAMIC UI DOWNLOADER & AUTOUDATE ENGINE
+-- OBSIDIAN UI LIBRARY LOADING
 -- ==========================================
-local UiLib = nil
-local LoadedUiLib = (function()
-	local CacheSystem = {
-		Url = "https://exotichub.app/live_mskmb7a2p8dj.lua",
-		Version = "ui_1.0.0",
-		Root = "exotichub99",
-		Folder = "exotichub99/cache",
-		File = "exotichub99/cache/exoui.lua",
-		VersionFile = "exotichub99/cache/exoui.version",
-		MinSize = 100,
-		LastStatus = "",
-		HasFS = function(self)
-			return type(isfile) == "function" and (type(readfile) == "function" and type(writefile) == "function")
-		end,
-		EnsureFolders = function(self)
-			if type(isfolder) ~= "function" or type(makefolder) ~= "function" then
-				return false
-			end
-			pcall(function()
-				if not isfolder(self.Root) then
-					makefolder(self.Root)
-				end
-				if not isfolder(self.Folder) then
-					makefolder(self.Folder)
-				end
-			end)
-			return true
-		end,
-		Read = function(self, path)
-			if not self:HasFS() or not isfile(path) then
-				return nil
-			end
-			local success, content = pcall(readfile, path)
-			if success and type(content) == "string" then
-				return content
-			end
-			return nil
-		end,
-		Write = function(self, path, content)
-			if not self:HasFS() then
-				return false
-			end
-			self:EnsureFolders()
-			local success = pcall(function()
-				writefile(path, content)
-			end)
-			return success == true
-		end,
-		Delete = function(self, path)
-			if type(delfile) ~= "function" or type(isfile) ~= "function" then
-				return false
-			end
-			if not isfile(path) then
-				return true
-			end
-			local success = pcall(function()
-				delfile(path)
-			end)
-			return success == true
-		end,
-		GoodSource = function(self, content)
-			return type(content) == "string" and # content >= self.MinSize
-		end,
-		Run = function(self, content, label)
-			if not self:GoodSource(content) then
-				self.LastStatus = "bad source: " .. tostring(label)
-				warn("[EXO UI]", self.LastStatus)
-				return nil
-			end
-			if type(loadstring) ~= "function" then
-				self.LastStatus = "loadstring missing"
-				warn("[EXO UI]", self.LastStatus)
-				return nil
-			end
-			local compiled, err = loadstring(content)
-			if not compiled then
-				self.LastStatus = "compile failed: " .. tostring(label)
-				warn("[EXO UI]", self.LastStatus, err)
-				return nil
-			end
-			local success, runtimeResult = pcall(compiled)
-			if not success or not runtimeResult then
-				self.LastStatus = "runtime failed: " .. tostring(label)
-				warn("[EXO UI]", self.LastStatus, runtimeResult)
-				return nil
-			end
-			self.LastStatus = "loaded: " .. tostring(label)
-			return runtimeResult
-		end,
-		Download = function(self)
-			local success, content = pcall(function()
-				return game:HttpGet(self.Url, true)
-			end)
-			if not success or not self:GoodSource(content) then
-				self.LastStatus = "download failed"
-				warn("[EXO UI]", self.LastStatus)
-				return nil
-			end
-			return content
-		end,
-		LoadCache = function(self, useFallback)
-			local cachedVersion = self:Read(self.VersionFile)
-			if not useFallback and cachedVersion ~= self.Version then
-				return nil
-			end
-			local content = self:Read(self.File)
-			return self:Run(content, useFallback and "old cache" or "cache")
-		end,
-		SaveCache = function(self, content)
-			if not self:GoodSource(content) then
-				return false
-			end
-			local savedContent = self:Write(self.File, content)
-			local savedVersion = self:Write(self.VersionFile, self.Version)
-			return savedContent and savedVersion
-		end,
-		Reload = function(self)
-			local content = self:Download()
-			if not content then
-				return nil
-			end
-			local evaluated = self:Run(content, "web")
-			if not evaluated then
-				return nil
-			end
-			self:SaveCache(content)
-			self.LastStatus = "reloaded v" .. tostring(self.Version)
-			return evaluated
-		end,
-		Clear = function(self)
-			self:Delete(self.File)
-			self:Delete(self.VersionFile)
-			self.LastStatus = "cache cleared"
-			return true
-		end,
-		Load = function(self)
-			self:EnsureFolders()
-			local library = self:LoadCache(false)
-			if library then
-				print("[EXO UI] Loaded cache v" .. tostring(self.Version))
-				return library
-			end
-			library = self:Reload()
-			if library then
-				print("[EXO UI] Loaded from web & cached v" .. tostring(self.Version))
-				return library
-			end
-			library = self:LoadCache(true)
-			if library then
-				warn("[EXO UI] Loading old cache fallback")
-				return library
-			end
-			self.LastStatus = "failed completely"
-			warn("[EXO UI]", self.LastStatus)
-			return nil
-		end
-	}
-	return CacheSystem:Load()
-end)()
-if not LoadedUiLib then
-	print("Exotic Hub UI: Failed to retrieve UI Library. Shutting down execution.")
-	return
-end
-UiLib = LoadedUiLib
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"))()
+local UiLib = Library
 
 -- ==========================================
 -- CORE STATE VARIABLES & GLOBAL STRUCTS
@@ -1996,148 +1834,148 @@ end
 -- ==========================================
 -- TOOL MANAGEMENT & UTILITY FUNCTIONS
 -- ==========================================
-local ToolManager = {
-    IsFruit = function(tool)
-        local success, result = pcall(function()
-            return tool and tool:IsA("Tool") and tool:GetAttribute("b") == "j"
-        end)
-        return success and result or false 
-    end,
-    
-    IsFavFruit = function(tool)
-        return tool:GetAttribute("d") == true 
-    end,
-    
-    IsFruitAndNotFav = function(tool)
-        local success, result = pcall(function()
-            return tool and tool:IsA("Tool") and tool:GetAttribute("b") == "j" and not tool:GetAttribute("d")
-        end)
-        return success and result or false 
-    end,
-    
-    GetFruitCount = function()
-        local count = 0 
-        for _, item in ipairs(Services.Backpack:GetChildren()) do 
-            if ToolManager.IsFruit(item) then 
-                count = count + 1 
-            end 
-        end 
-        local equipped = ToolManager.GetHeldTool()
-        if equipped and ToolManager.IsFruit(equipped) then 
+local ToolManager = {}
+
+ToolManager.IsFruit = function(tool)
+    local success, result = pcall(function()
+        return tool and tool:IsA("Tool") and tool:GetAttribute("b") == "j"
+    end)
+    return success and result or false 
+end
+
+ToolManager.IsFavFruit = function(tool)
+    return tool:GetAttribute("d") == true 
+end
+
+ToolManager.IsFruitAndNotFav = function(tool)
+    local success, result = pcall(function()
+        return tool and tool:IsA("Tool") and tool:GetAttribute("b") == "j" and not tool:GetAttribute("d")
+    end)
+    return success and result or false 
+end
+
+ToolManager.GetFruitCount = function()
+    local count = 0 
+    for _, item in ipairs(Services.Backpack:GetChildren()) do 
+        if ToolManager.IsFruit(item) then 
             count = count + 1 
         end 
-        return count 
-    end,
-    
-    GetFruitCountUsingNameFromData = function(itemName)
-        local count = 0 
-        if not ExoticHub.InventoryDataBind or not itemName then return count end 
-        for _, val in pairs(ExoticHub.InventoryDataBind) do 
-            if val.ItemType == "Holdable" and val.ItemData and val.ItemData.ItemName == itemName then 
-                count = count + 1 
+    end 
+    local equipped = ToolManager.GetHeldTool and ToolManager.GetHeldTool()
+    if equipped and ToolManager.IsFruit(equipped) then 
+        count = count + 1 
+    end 
+    return count 
+end
+
+ToolManager.GetFruitCountUsingNameFromData = function(itemName)
+    local count = 0 
+    if not ExoticHub.InventoryDataBind or not itemName then return count end 
+    for _, val in pairs(ExoticHub.InventoryDataBind) do 
+        if val.ItemType == "Holdable" and val.ItemData and val.ItemData.ItemName == itemName then 
+            count = count + 1 
+        end 
+    end 
+    return count 
+end
+
+ToolManager.IsFood = function(tool)
+    if not tool or not tool:IsA("Tool") or not tool:GetAttribute("f") then return false end 
+    return tool:GetAttribute("b") == "u"
+end
+
+ToolManager.GetFoodRandomAny = function()
+    local held = ToolManager.GetHeldTool and ToolManager.GetHeldTool()
+    if held and ToolManager.IsFood(held) then return held end 
+    for _, item in ipairs(Services.Backpack:GetChildren()) do 
+        if ToolManager.IsFood(item) then return item end 
+    end 
+    return nil 
+end
+
+ToolManager.GetFoodUsingName = function(name)
+    for _, item in ipairs(Services.Backpack:GetChildren()) do 
+        if item:IsA("Tool") and item:GetAttribute("b") == "u" and item:GetAttribute("f") == name then 
+            return item 
+        end 
+    end 
+    return nil 
+end
+
+ToolManager.GetSeedUsingName = function(name)
+    local success, result = pcall(function()
+        for _, item in ipairs(Services.Backpack:GetChildren()) do 
+            if item:IsA("Tool") and (not item:GetAttribute("b") or item:GetAttribute("b") == "n") then 
+                local itemName = item:GetAttribute("f")
+                local isSeed = item:GetAttribute("Seed")
+                if isSeed == name or itemName == name then 
+                    return item 
+                end 
             end 
         end 
-        return count 
-    end,
-    
-    IsFood = function(tool)
-        if not tool or not tool:IsA("Tool") or not tool:GetAttribute("f") then return false end 
-        return tool:GetAttribute("b") == "u"
-    end,
-    
-    GetFoodRandomAny = function()
-        local held = ToolManager.GetHeldTool()
-        if ToolManager.IsFood(held) then return held end 
-        for _, item in ipairs(Services.Backpack:GetChildren()) do 
-            if ToolManager.IsFood(item) then return item end 
-        end 
-        return nil 
-    end,
-    
-    GetFoodUsingName = function(name)
-        for _, item in ipairs(Services.Backpack:GetChildren()) do 
-            if item:IsA("Tool") and item:GetAttribute("b") == "u" and item:GetAttribute("f") == name then 
-                return item 
+        local held = ToolManager.GetHeldTool and ToolManager.GetHeldTool()
+        if held and (not held:GetAttribute("b") or held:GetAttribute("b") == "n") then 
+            local itemName = held:GetAttribute("f")
+            local isSeed = held:GetAttribute("Seed")
+            if isSeed == name or itemName == name then 
+                return held 
             end 
         end 
         return nil 
-    end,
-    
-    GetSeedUsingName = function(name)
-        local success, result = pcall(function()
+    end)
+    return success and result or nil 
+end
+
+ToolManager.GetSeedCountQuantity = function(seedTool)
+    if not seedTool then return 0 end 
+    return seedTool:GetAttribute("Quantity") or 0 
+end
+
+ToolManager.GetWateringCan = function(canName)
+    for _, item in ipairs(Services.Backpack:GetChildren()) do 
+        if item:IsA("Tool") and item:GetAttribute("b") == "o" and string.find(item.Name, canName, 1, true) then 
+            return item 
+        end 
+    end 
+    local held = ToolManager.GetHeldTool and ToolManager.GetHeldTool()
+    if held and held:GetAttribute("b") == "o" and string.find(held.Name, canName, 1, true) then 
+        return held 
+    end 
+    return nil 
+end
+
+ToolManager.UseWateringCan = function(targetPosition)
+    local flatPosition = Vector3.new(targetPosition.X, 0, targetPosition.Z)
+    Services.Water_RE:FireServer(flatPosition)
+end
+
+ToolManager.GetShovel = function()
+    local success, result = pcall(function()
+        local queryName = "Shovel [Destroy Plants]"
+        local queryUUID = "SHOVEL"
+        if Services.Backpack then 
             for _, item in ipairs(Services.Backpack:GetChildren()) do 
-                if item:IsA("Tool") and (not item:GetAttribute("b") or item:GetAttribute("b") == "n") then 
-                    local itemName = item:GetAttribute("f")
-                    local isSeed = item:GetAttribute("Seed")
-                    if isSeed == name or itemName == name then 
+                if item:IsA("Tool") then 
+                    if item:GetAttribute("UUID") == queryUUID or string.find(item.Name, queryName, 1, true) then 
                         return item 
                     end 
                 end 
             end 
-            local held = ToolManager.GetHeldTool()
-            if held and (not held:GetAttribute("b") or held:GetAttribute("b") == "n") then 
-                local itemName = held:GetAttribute("f")
-                local isSeed = held:GetAttribute("Seed")
-                if isSeed == name or itemName == name then 
-                    return held 
+        end 
+        local char = Services.Character 
+        if char then 
+            for _, item in ipairs(char:GetChildren()) do 
+                if item:IsA("Tool") then 
+                    if item:GetAttribute("UUID") == queryUUID or string.find(item.Name, queryName, 1, true) then 
+                        return item 
+                    end 
                 end 
             end 
-            return nil 
-        end)
-        return success and result or nil 
-    end,
-    
-    GetSeedCountQuantity = function(seedTool)
-        if not seedInstance then return 0 end 
-        return seedInstance:GetAttribute("Quantity") or 0 
-    end,
-    
-    GetWateringCan = function(canName)
-        for _, item in ipairs(Services.Backpack:GetChildren()) do 
-            if item:IsA("Tool") and item:GetAttribute("b") == "o" and string.find(item.Name, canName, 1, true) then 
-                return item 
-            end 
-        end 
-        local held = ToolManager.GetHeldTool()
-        if held and held:GetAttribute("b") == "o" and string.find(held.Name, canName, 1, true) then 
-            return held 
         end 
         return nil 
-    end,
-    
-    UseWateringCan = function(targetPosition)
-        local flatPosition = Vector3.new(targetPosition.X, 0, targetPosition.Z)
-        Services.Water_RE:FireServer(flatPosition)
-    end,
-    
-    GetShovel = function()
-        local success, result = pcall(function()
-            local queryName = "Shovel [Destroy Plants]"
-            local queryUUID = "SHOVEL"
-            if Services.Backpack then 
-                for _, item in ipairs(Services.Backpack:GetChildren()) do 
-                    if item:IsA("Tool") then 
-                        if item:GetAttribute("UUID") == queryUUID or string.find(item.Name, queryName, 1, true) then 
-                            return item 
-                        end 
-                    end 
-                end 
-            end 
-            local char = Services.Character 
-            if char then 
-                for _, item in ipairs(char:GetChildren()) do 
-                    if item:IsA("Tool") then 
-                        if item:GetAttribute("UUID") == queryUUID or string.find(item.Name, queryName, 1, true) then 
-                            return item 
-                        end 
-                    end 
-                end 
-            end 
-            return nil 
-        end)
-        return success and result or nil 
-    end
-}
+    end)
+    return success and result or nil 
+end
 
 -- ==========================================
 -- ADVANCED PLANT & HARVEST MANAGER
@@ -2219,7 +2057,7 @@ function PlantManager.GetFruitMutationsVariantAndWeight(fruitInstance)
 end 
 
 function PlantManager.HarvestFruitsUsingNames(namesTable, maxAmount)
-    if InventoryService:IsMaxInventory() then return true end 
+    if InventoryService and InventoryService:IsMaxInventory() then return true end 
     
     local readyList = {}
     local gatheredCount = {}
@@ -2329,6 +2167,7 @@ local PackOpener = {}
 
 function PackOpener.GetSeedPackRewardFromResult(resultTable)
     if type(resultTable) ~= "table" then return nil end 
+    if not SeedPackData or not SeedPackData.Packs then return nil end
     local packType = resultTable.seedPackType 
     local index = resultTable.resultIndex 
     if not packType or not index then return nil end 
@@ -2405,8 +2244,10 @@ EventManager.CampFireEvent = {
         if not SaveData.campcollectfruits then return false end 
         local whitelists = {}
         local filters = { amount = 9, batch_mode = false, random = true }
-        if ExoticHub.IS_HATCHING or InventoryService:IsMaxInventory() then return end 
-        PlantManager.CollectFruitByNamesSortedRarityConfig(whitelists, filters)
+        if ExoticHub.IS_HATCHING or (InventoryService and InventoryService:IsMaxInventory()) then return end 
+        if PlantManager.CollectFruitByNamesSortedRarityConfig then
+            PlantManager.CollectFruitByNamesSortedRarityConfig(whitelists, filters)
+        end
     end,
     
     CampFireLoop = function()
@@ -2418,14 +2259,14 @@ EventManager.CampFireEvent = {
             EventManager.CampFireEvent.CollectFruitsCamp()
         end 
         
-        local backpackFruits = ToolManager.GetFruitsFromBackpackSorted()
+        local backpackFruits = ToolManager.GetFruitsFromBackpackSorted and ToolManager.GetFruitsFromBackpackSorted() or {}
         local submittedCount = 0 
         for _, fruit in ipairs(backpackFruits) do 
             if submittedCount >= 3 then break end 
             if not ToolManager.IsFavFruit(fruit) then 
-                ToolManager.UnequipTools()
+                if ToolManager.UnequipTools then ToolManager.UnequipTools() end
                 task.wait(0.3)
-                if ToolManager.EquipTool(fruit) then 
+                if ToolManager.EquipTool and ToolManager.EquipTool(fruit) then 
                     EventManager.CampFireEvent.SubmitHeldToCamp()
                     submittedCount = submittedCount + 1 
                     task.wait(0.3)
@@ -2451,7 +2292,9 @@ EventManager.HoneyBee = {
             return false 
         end 
         EventManager.HoneyBee.LastAutoMiddle = now 
-        Teleport.TeleportToCFrame(FarmManager.mFarm.Center_Point.CFrame)
+        if FarmManager.mFarm and FarmManager.mFarm.Center_Point then
+            Teleport.TeleportToCFrame(FarmManager.mFarm.Center_Point.CFrame)
+        end
         return true 
     end,
     
@@ -2464,17 +2307,17 @@ EventManager.HoneyBee = {
             "Honey Corn", "Honey Carrot", "Honey Honey Daisy"
         }
         local limit = 25 
-        local center = FarmManager.mFarm.Center_Point.Position 
+        local center = FarmManager.mFarm and FarmManager.mFarm.Center_Point and FarmManager.mFarm.Center_Point.Position or Vector3.new(0, 0, 0)
         
         for _, seedName in ipairs(honeyPlants) do 
             if not Settings.is_auto_plantseedEvent then break end 
-            if FarmManager.GetPlantCountBySeed(seedName) >= limit then continue end 
+            if FarmManager.GetPlantCountBySeed and FarmManager.GetPlantCountBySeed(seedName) >= limit then continue end 
             
             local seedTool = ToolManager.GetSeedUsingName(seedName)
             if seedTool then 
-                ToolManager.UnequipTools()
+                if ToolManager.UnequipTools then ToolManager.UnequipTools() end
                 task.wait(0.1)
-                ToolManager.EquipTool(seedTool)
+                if ToolManager.EquipTool then ToolManager.EquipTool(seedTool) end
                 task.wait(0.2)
                 Services.PlantRemote:FireServer(center, seedName)
                 task.wait(0.2)
@@ -2567,9 +2410,9 @@ EventManager.JellyCrafting = {
             
             if selectedSeed then 
                 local seedTool = ToolManager.GetSeedUsingName(selectedSeed)
-                ToolManager.UnequipTools()
+                if ToolManager.UnequipTools then ToolManager.UnequipTools() end
                 task.wait(0.2)
-                if ToolManager.EquipTool(seedTool) then 
+                if ToolManager.EquipTool and ToolManager.EquipTool(seedTool) then 
                     EventManager.JellyCrafting.SetText("Submitting " .. selectedSeed)
                     local submitted = EventManager.JellyCrafting.FireRemote("Submit")
                     if submitted then 
@@ -2585,7 +2428,132 @@ EventManager.JellyCrafting = {
     end
 }
 
+-- Safe fallbacks for potentially uninitialized or missing script systems
+local Utility = {
+    ActivateFlatMode = function()
+        print("[Exotic Hub] High performance mode activated (Flat Mode).")
+    end
+}
+
+if not InventoryService then
+    InventoryService = {
+        IsMaxInventory = function() return false end
+    }
+end
+
+FarmManager.mObjects_Physical = FarmManager.mObjects_Physical or Instance.new("Folder")
+FarmManager.Get_Plants_Physical_Objects = FarmManager.Get_Plants_Physical_Objects or function() return {} end
+FarmManager.mFarm = FarmManager.mFarm or {
+    Center_Point = {
+        CFrame = CFrame.new(0, 0, 0),
+        Position = Vector3.new(0, 0, 0)
+    }
+}
+
+ExoticHub.StartHatchingSystem = ExoticHub.StartHatchingSystem or function()
+    print("[Exotic Hub] Starting hatching system...")
+end
+ExoticHub.StopHatchingSystem = ExoticHub.StopHatchingSystem or function()
+    print("[Exotic Hub] Stopping hatching system...")
+end
+ExoticHub.SendTestMessage = ExoticHub.SendTestMessage or function()
+    print("[Exotic Hub] Sending test webhook message...")
+end
+PlantManager.CollectFruitByNamesSortedRarityConfig = PlantManager.CollectFruitByNamesSortedRarityConfig or function() end
+ToolManager.GetFruitsFromBackpackSorted = ToolManager.GetFruitsFromBackpackSorted or function() return {} end
+ToolManager.UnequipTools = ToolManager.UnequipTools or function() end
+ToolManager.EquipTool = ToolManager.EquipTool or function() return false end
+
 print("Exotic Hub: Part 2 Core Engine Loaded successfully.")
+
+-- ==========================================
+-- OBSIDIAN COMPATIBILITY LAYER & WINDOWS
+-- ==========================================
+local UI_Labels = {}
+local UI_Dropdowns = {}
+
+local function wrapGroupbox(groupbox)
+    if not groupbox then return nil end
+
+    local originalAddLabel = groupbox.AddLabel
+    groupbox.AddLabel = function(self, arg1, arg2, arg3)
+        if type(arg1) == "table" then
+            local text = arg1.Text or ""
+            local doesWrap = arg1.DoesWrap or false
+            return originalAddLabel(self, text, doesWrap)
+        elseif type(arg2) == "table" then
+            return originalAddLabel(self, arg1, arg2)
+        else
+            return originalAddLabel(self, arg1, arg2, arg3)
+        end
+    end
+
+    local originalAddInput = groupbox.AddInput
+    groupbox.AddInput = function(self, idx, info)
+        local inputObj = originalAddInput(self, idx, info)
+        if inputObj and type(inputObj) == "table" then
+            if not inputObj.SetText then
+                inputObj.SetText = function(s, text)
+                    if inputObj.TextLabel then
+                        inputObj.TextLabel.Text = text
+                    elseif inputObj.Label then
+                        inputObj.Label.Text = text
+                    end
+                end
+            end
+        end
+        return inputObj
+    end
+
+    local originalAddDropdown = groupbox.AddDropdown
+    groupbox.AddDropdown = function(self, idx, info)
+        local dropdownObj = originalAddDropdown(self, idx, info)
+        if dropdownObj and type(dropdownObj) == "table" then
+            if not dropdownObj.SetText then
+                dropdownObj.SetText = function(s, text)
+                    if dropdownObj.TextLabel then
+                        dropdownObj.TextLabel.Text = text
+                    elseif dropdownObj.Label then
+                        dropdownObj.Label.Text = text
+                    end
+                end
+            end
+        end
+        return dropdownObj
+    end
+
+    return groupbox
+end
+
+local function wrapTab(tab)
+    if not tab then return nil end
+
+    local originalAddLeftGroupbox = tab.AddLeftGroupbox
+    tab.AddLeftGroupbox = function(self, name, icon, ...)
+        local groupbox = originalAddLeftGroupbox(self, name, icon, ...)
+        return wrapGroupbox(groupbox)
+    end
+
+    local originalAddRightGroupbox = tab.AddRightGroupbox
+    tab.AddRightGroupbox = function(self, name, icon, ...)
+        local groupbox = originalAddRightGroupbox(self, name, icon, ...)
+        return wrapGroupbox(groupbox)
+    end
+
+    return tab
+end
+
+local function wrapWindow(win)
+    if not win then return nil end
+
+    local originalAddTab = win.AddTab
+    win.AddTab = function(self, nameOrTable, icon)
+        local tabObj = originalAddTab(self, nameOrTable, icon)
+        return wrapTab(tabObj)
+    end
+
+    return win
+end
 
 -- ==========================================
 -- UI WINDOW CREATION & STYLING
@@ -2593,18 +2561,21 @@ print("Exotic Hub: Part 2 Core Engine Loaded successfully.")
 local UIWindow = nil 
 
 if UiLib then 
-    UIWindow = UiLib:CreateWindow({
+    local rawWindow = UiLib:CreateWindow({
         Title = ExoticHub.GetTextUserHubPower and ExoticHub:GetTextUserHubPower() or "Exotic Hub PRO",
         Footer = FormatUtility.GetFooterInfo and FormatUtility:GetFooterInfo(true) or "exotichub.app/join",
         ToggleKeybind = Enum.KeyCode.RightControl,
         Center = true,
         AutoShow = SaveData.autoshowuisc
     })
+    UIWindow = wrapWindow(rawWindow)
     
     -- Ensure the main window remains active
-    if UIWindow and UIWindow.ScreenGui and UIWindow.ScreenGui:FindFirstChild("Main") then 
-        UIWindow.ScreenGui.Main.Active = true 
-    end 
+    pcall(function()
+        if UIWindow and UIWindow.ScreenGui and UIWindow.ScreenGui:FindFirstChild("Main") then 
+            UIWindow.ScreenGui.Main.Active = true 
+        end 
+    end)
 end 
 
 -- Helper to safely convert hex sequences for custom colors inside labels
@@ -2822,7 +2793,9 @@ function ExoticHub.ProUi()
                 ToolManager.UnequipTools()
                 task.wait(0.2)
                 for _, uuid in ipairs(SaveData.customteams_team1) do 
-                    Services.petsServiceRemote:FireServer("EquipPet", uuid, FarmManager.mFarm.Center_Point.CFrame)
+                    if FarmManager.mFarm and FarmManager.mFarm.Center_Point then
+                        Services.petsServiceRemote:FireServer("EquipPet", uuid, FarmManager.mFarm.Center_Point.CFrame)
+                    end
                 end 
             end
         })
@@ -2945,7 +2918,6 @@ function ExoticHub.LoadUiAll()
     
     -- Establish standard workspace UI scale profiles
     pcall(function()
-        local scaleOptions = {0.45, 0.50, 0.60, 0.65, 0.70, 0.75, 0.80, 0.90, 0.93, 0.96, 0.99, 1.00}
         local activeScale = SaveData.ui_rescale_val or 100 
         if UiLib and UiLib.SetDPIScale then 
             UiLib:SetDPIScale(activeScale)
